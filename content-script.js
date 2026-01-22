@@ -1,102 +1,27 @@
 (() => {
   'use strict';
 
-  // ——— UNIVERSAL REPLACER ———
-  function replaceLabels(root) {
-    // 1) ARIA labels
-    root.querySelectorAll('[aria-label]').forEach(el => {
-      const aria = el.getAttribute('aria-label');
-      if (aria.includes('Gulf of America')) {
-        el.setAttribute(
-          'aria-label',
-          aria.replace(/Gulf of America/g, 'Gulf of Mexico')
-        );
-      }
-    });
-
-    // 2) Text nodes everywhere
-    const walker = document.createTreeWalker(
-      root,
-      NodeFilter.SHOW_TEXT,
-      null,
-      false
-    );
-    let node;
-    while (node = walker.nextNode()) {
-      if (node.nodeValue.includes('Gulf of America')) {
-        node.nodeValue = node.nodeValue.replace(
-          /Gulf of America/g,
-          'Gulf of Mexico'
-        );
-      }
-    }
-  }
-
-  // run once immediately
-  replaceLabels(document);
-
-  // ——— SEARCH BOX SWAP ———
-  function replaceSearchBox() {
-    const input = document.getElementById('searchboxinput');
-    if (input && input.value.includes('Gulf of America')) {
-      input.value = input.value.replace(/Gulf of America/g, 'Gulf of Mexico');
-      if (input.placeholder && input.placeholder.includes('Gulf of America')) {
-        input.placeholder = input.placeholder.replace(/Gulf of America/g, 'Gulf of Mexico');
-      }
-    }
-  }
-
-  replaceSearchBox();
-
-  // ——— MUTATION OBSERVER FOR POPUPS & TEXT CHANGES ———
-  const observer = new MutationObserver(muts => {
-    for (let m of muts) {
-      // new nodes
-      for (let n of m.addedNodes) {
-        if (n.nodeType === 1) replaceLabels(n);
-      }
-      // characterData changes
-      if (m.type === 'characterData') {
-        const v = m.target.nodeValue;
-        if (v.includes('Gulf of America')) {
-          m.target.nodeValue = v.replace(/Gulf of America/g, 'Gulf of Mexico');
-        }
-      }
-    }
-  });
-  observer.observe(document.body, {
-    childList:     true,
-    subtree:       true,
-    characterData: true,
-    attributes:    true,
-    attributeFilter: ['value']
-  });
-
-  // hook search-box attribute changes
-  const searchInput = document.getElementById('searchboxinput');
-  if (searchInput) {
-    new MutationObserver(replaceSearchBox).observe(searchInput, {
-      attributes:     true,
-      attributeFilter: ['value']
-    });
-  }
-  setInterval(replaceSearchBox, 300);
-
-  // re-run on marker hover
-  document.body.addEventListener('mouseover', e => {
-    if (e.target.classList.contains('ET197e')) {
-      setTimeout(() => replaceLabels(document), 50);
-    }
-  });
-
-  // ——— OVERLAY LOGIC ———
-  const DEFAULT = {
+  const LABEL_TEXT = 'Gulf of Mexico';
+  const LABEL_TEXT_HTML = 'Gulf<br>of Mexico';
+  const OVERLAY_STYLES = {
+    position:      'fixed',
+    pointerEvents: 'none',
+    whiteSpace:    'pre-line',
+    textAlign:     'center',
+    borderRadius:  '4px',
+    padding:       '2px',
+    transform:     'translate(-50%, -100%)',
+    zIndex:        '9999',
+    display:       'inline-block',
+    color: 'rgb(12, 125, 148)'
+  };
+  const DEFAULT_OVERLAY = {
     lat:  24.745124,
     lng: -91.737921,
     backgroundColor: 'rgb(114, 212, 232)',
     fontSize:        '12px'
   };
-  const coordsMap = [
+  const OVERLAY_COORDS = [
     { zoom: 2,  lat: 24.941090, lng: -90.102396, backgroundColor: 'rgb(109, 212, 232)', fontSize: '12px' },
     { zoom: 3,  lat: 24.941090, lng: -90.102396, backgroundColor: 'rgb(109, 212, 232)', fontSize: '12px' },
     { zoom: 4,  lat: 24.501996, lng: -90.058450, backgroundColor: 'rgb(109, 212, 232)', fontSize: '12px' },
@@ -118,8 +43,99 @@
     { zoom: 20, lat: 25.303225, lng: -90.065830, backgroundColor: 'rgb(145, 217, 237)', fontSize: '12px' },
     { zoom: 21, lat: 25.303225, lng: -90.065830, backgroundColor: 'rgb(145, 217, 237)', fontSize: '12px' }
   ];
+
+  // ——— UNIVERSAL REPLACER ———
+  function replaceLabels(root) {
+    // 1) ARIA labels
+    root.querySelectorAll('[aria-label]').forEach(el => {
+      const aria = el.getAttribute('aria-label');
+      if (aria.includes('Gulf of America')) {
+        el.setAttribute(
+          'aria-label',
+          aria.replace(/Gulf of America/g, LABEL_TEXT)
+        );
+      }
+    });
+
+    // 2) Text nodes everywhere
+    const walker = document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    let node;
+    while (node = walker.nextNode()) {
+      if (node.nodeValue.includes('Gulf of America')) {
+        node.nodeValue = node.nodeValue.replace(
+          /Gulf of America/g,
+          LABEL_TEXT
+        );
+      }
+    }
+  }
+
+  // run once immediately
+  replaceLabels(document);
+
+  // ——— SEARCH BOX SWAP ———
+  function replaceSearchBox() {
+    const input = document.getElementById('searchboxinput');
+    if (input && input.value.includes('Gulf of America')) {
+      input.value = input.value.replace(/Gulf of America/g, LABEL_TEXT);
+      if (input.placeholder && input.placeholder.includes('Gulf of America')) {
+        input.placeholder = input.placeholder.replace(/Gulf of America/g, LABEL_TEXT);
+      }
+    }
+  }
+
+  replaceSearchBox();
+
+  // ——— MUTATION OBSERVER FOR POPUPS & TEXT CHANGES ———
+  const observer = new MutationObserver(muts => {
+    for (let m of muts) {
+      // new nodes
+      for (let n of m.addedNodes) {
+        if (n.nodeType === 1) replaceLabels(n);
+      }
+      // characterData changes
+      if (m.type === 'characterData') {
+        const v = m.target.nodeValue;
+        if (v.includes('Gulf of America')) {
+          m.target.nodeValue = v.replace(/Gulf of America/g, LABEL_TEXT);
+        }
+      }
+    }
+    scheduleOverlayUpdate();
+  });
+  observer.observe(document.body, {
+    childList:     true,
+    subtree:       true,
+    characterData: true,
+    attributes:    true,
+    attributeFilter: ['value']
+  });
+
+  // hook search-box attribute changes
+  const searchInput = document.getElementById('searchboxinput');
+  if (searchInput) {
+    new MutationObserver(replaceSearchBox).observe(searchInput, {
+      attributes:     true,
+      attributeFilter: ['value']
+    });
+    searchInput.addEventListener('input', replaceSearchBox);
+  }
+
+  // re-run on marker hover
+  document.body.addEventListener('mouseover', e => {
+    if (e.target.classList.contains('ET197e')) {
+      setTimeout(() => replaceLabels(document), 50);
+    }
+  });
+
+  // ——— OVERLAY LOGIC ———
   function getEntryForZoom(z) {
-    return coordsMap.find(o => o.zoom === z) || DEFAULT;
+    return OVERLAY_COORDS.find(o => o.zoom === z) || DEFAULT_OVERLAY;
   }
   function latLngToPoint(lat, lng, cLat, cLng, zoom, w, h) {
     const tile = 256, scale = tile * 2**zoom;
@@ -134,39 +150,75 @@
   }
 
   let overlay;
+  let lastMapState = null;
+  let rafId = null;
   function createOverlay() {
     overlay = document.createElement('div');
-    overlay.innerHTML = 'Gulf<br>of Mexico';
-    Object.assign(overlay.style, {
-      position:      'fixed',
-      pointerEvents: 'none',
-      whiteSpace:    'pre-line',
-      textAlign:     'center',
-      borderRadius:  '4px',
-      padding:       '2px',
-      transform:     'translate(-50%, -100%)',
-      zIndex:        '9999',
-      display:       'inline-block',
-      color: 'rgb(12, 125, 148)'
-    });
+    overlay.innerHTML = LABEL_TEXT_HTML;
+    Object.assign(overlay.style, OVERLAY_STYLES);
     document.body.appendChild(overlay);
+  }
+
+  function parseMapStateFromUrl() {
+    const match = location.pathname.match(/@(-?[\d.]+),(-?[\d.]+),([\d.]+)z/);
+    if (match) {
+      const [_, cLat, cLng, rz] = match;
+      return { centerLat: +cLat, centerLng: +cLng, zoom: Math.round(+rz) };
+    }
+
+    const params = new URLSearchParams(location.search);
+    const ll = params.get('ll');
+    const z = params.get('z');
+    if (ll && z) {
+      const [cLat, cLng] = ll.split(',');
+      return { centerLat: +cLat, centerLng: +cLng, zoom: Math.round(+z) };
+    }
+
+    return null;
+  }
+
+  function getMapState() {
+    const state = parseMapStateFromUrl();
+    if (state) {
+      lastMapState = state;
+      return state;
+    }
+    return lastMapState;
   }
 
   function updateOverlay() {
     const c = document.querySelector('.widget-scene');
     if (!c) return;
     if (!overlay) createOverlay();
-    const m = location.pathname.match(/@(-?[\d.]+),(-?[\d.]+),([\d.]+)z/);
-    if (!m) return;
-    const [_, cLat, cLng, rz] = m, zoom = Math.round(+rz);
+    const state = getMapState();
+    if (!state) return;
+    const { centerLat, centerLng, zoom } = state;
     const { lat, lng, backgroundColor, fontSize } = getEntryForZoom(zoom);
     const rect = c.getBoundingClientRect();
-    const { x, y } = latLngToPoint(lat, lng, +cLat, +cLng, zoom, rect.width, rect.height);
+    const { x, y } = latLngToPoint(lat, lng, centerLat, centerLng, zoom, rect.width, rect.height);
     overlay.style.left            = `${rect.left + x}px`;
     overlay.style.top             = `${rect.top  + y}px`;
     overlay.style.backgroundColor = backgroundColor;
     overlay.style.fontSize        = fontSize;
   }
 
-  setInterval(updateOverlay, 200);
+  function scheduleOverlayUpdate() {
+    if (rafId !== null) return;
+    rafId = requestAnimationFrame(() => {
+      rafId = null;
+      updateOverlay();
+    });
+  }
+
+  scheduleOverlayUpdate();
+  window.addEventListener('resize', scheduleOverlayUpdate);
+  window.addEventListener('hashchange', scheduleOverlayUpdate);
+  window.addEventListener('popstate', scheduleOverlayUpdate);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      scheduleOverlayUpdate();
+    }
+  });
+  document.body.addEventListener('wheel', scheduleOverlayUpdate, { passive: true });
+  document.body.addEventListener('mouseup', scheduleOverlayUpdate);
 })();
