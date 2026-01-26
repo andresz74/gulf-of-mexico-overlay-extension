@@ -186,15 +186,22 @@
     return lastMapState;
   }
 
+  function getMapContainer() {
+    return document.querySelector(
+      '.widget-scene, #scene, #map, .widget-scene-canvas, [aria-label="Map"], canvas.widget-scene, canvas#scene'
+    );
+  }
+
   function updateOverlay() {
-    const c = document.querySelector('.widget-scene');
-    if (!c) return;
     if (!overlay) createOverlay();
     const state = getMapState();
     if (!state) return;
     const { centerLat, centerLng, zoom } = state;
     const { lat, lng, backgroundColor, fontSize } = getEntryForZoom(zoom);
-    const rect = c.getBoundingClientRect();
+    const c = getMapContainer();
+    const rect = c
+      ? c.getBoundingClientRect()
+      : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
     const { x, y } = latLngToPoint(lat, lng, centerLat, centerLng, zoom, rect.width, rect.height);
     overlay.style.left            = `${rect.left + x}px`;
     overlay.style.top             = `${rect.top  + y}px`;
